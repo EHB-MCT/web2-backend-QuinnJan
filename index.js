@@ -1,5 +1,5 @@
 const express = require('express');
-const https = require("https");
+const got = require('got');
 const fs = require('fs/promises');
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
@@ -10,9 +10,8 @@ const config = require('./config.json');
 
 //Create the mongo client to use
 const client = new MongoClient(config.finalUrl);
-
 const app = express();
-const port = 1337;
+const port = 5500;
 
 //app.use(express.static('public'));
 app.use(bodyParser.json());
@@ -31,7 +30,7 @@ app.get('/test', async (req, res) => {
 
 app.post('/signup', (req, res) => {
     console.log(req.body);
-    collection = db.collection("emails");
+    collection = db.collection("email");
     if (req.body.email) {
         collection.insertOne(req.body).then(result => {
             console.log(result);
@@ -41,38 +40,65 @@ app.post('/signup', (req, res) => {
     res.status(201).send('OK');
 });
 
-// app.post('/comment', async (req, res) => {
-//     let accesscode = req.headers.authorization;
-//     if (!accesscode) {
-//         res.status(500).send({
-//             "error": "missing access code"
-//         })
-//         return;
-//     }
+app.post('/note', async (req, res) => {
+    let accesscode = req.headers.authorization;
+    if (!accesscode) {
+        res.status(500).send({
+            "error": "missing access code"
+        })
+        return;
+    }
 
-//     try {
-//         let response = await https.get("https://www.strava.com/api/v3/athlete/", {
-//             headers: {
-//                 "Authentication": accesscode
-//             }
-//         })
-//         if (response.ok) {
-//             let result = response.json();
-//             console.log(result);
-//         }
-//         res.status(500).send({
-//             "error": "invalid access code"
-//         });
-//         return;
-//         // .then(response => response.text())
-//         // .then(result => console.log(result))
-//     } catch (error) {
-//         res.status(500).send({
-//             "error": "invalid access code"
-//         });
-//         return;
-//     }
-// });
+    try {
+        let response = await got("https://www.strava.com/api/v3/athlete/", {
+            headers: {
+                "Authorization": accesscode
+            },
+            json: true
+        });
+
+        console.log(response.body);
+
+        if (!req.body.note || !req.body.id || !response.body.id) {
+            res.status(400).send({
+                "error": "Not all info"
+
+            })
+            return;
+        }
+
+        try {
+            await client.connect();
+
+            const collection = client.db('Strava').collection('Notes');
+
+            const note = {
+                userid: response.body.id,
+                trackid: req.body.id,
+                note: req.body.note
+            };
+
+            let query = {
+                _id: req.body.id
+            };
+
+            let result = await collection.replaceOne(query, note, {
+                upsert: true
+            });
+
+        } catch (error) {
+            console.log(error);
+        }
+        res.status(200);
+        return;
+    } catch (error) {
+        res.status(500).send({
+            "error": "something went wrong",
+            "e": error
+        });
+        return;
+    }
+});
 
 
 
@@ -87,26 +113,28 @@ app.post('/signup', (req, res) => {
 // Return all boardgames from the database
 // app.get('/boardgames', async (req, res) =>{
 
-//     try{
-//         //connect to the db
-//         await client.connect();
+// try {
+//     //connect to the db
+//     await client.connect();
 
-//         //retrieve the boardgame collection data
-//         const colli = client.db('session5').collection('boardgames');
-//         const bgs = await colli.find({}).toArray();
+//     //retrieve the boardgame collection data
+//     const colli = client.db('Web2_QuinnJan_project').collection('Notes');
+//     const bgs = await colli.find({}).toArray();
 
-//         //Send back the data with the response
-//         res.status(200).send(bgs);
-//     }catch(error){
-//         console.log(error)
-//         res.status(500).send({
-//             error: 'Something went wrong',
-//             value: error
-//         });
-//     }finally {
-//         await client.close();
-//     }
+//     //Send back the data with the response
+//     res.status(200).send(bgs);
+// } catch (error) {
+//     console.log(error)
+//     res.status(500).send({
+//         error: 'Something went wrong',
+//         value: error
+//     });
+// } finally {
+//     await client.close();
+// }
+
 // });
+
 
 // // /boardgame?id=1234
 // app.get('/boardgame', async (req,res) => {
@@ -141,6 +169,8 @@ app.post('/signup', (req, res) => {
 //         await client.close();
 //     }
 // });
+
+
 
 // // save a boardgame
 // app.post('/saveBoardgame', async (req, res) => {
