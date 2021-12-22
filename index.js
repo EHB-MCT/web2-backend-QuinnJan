@@ -1,4 +1,5 @@
 const express = require('express');
+const cors = require('cors');
 const got = require('got');
 const fs = require('fs/promises');
 const bodyParser = require('body-parser');
@@ -15,6 +16,14 @@ const port = 5500;
 
 //app.use(express.static('public'));
 app.use(bodyParser.json());
+
+app.use(cors());
+
+app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    next();
+});
 
 
 //Root route
@@ -57,7 +66,7 @@ app.post('/note', async (req, res) => {
             json: true
         });
 
-        console.log(response.body);
+        //console.log(response.body);
 
         if (!req.body.note || !req.body.id || !response.body.id) {
             res.status(400).send({
@@ -87,19 +96,64 @@ app.post('/note', async (req, res) => {
             });
 
         } catch (error) {
+            throw error;
             console.log(error);
         }
-        res.status(200);
-        return;
+        res.status(200).send();
     } catch (error) {
         res.status(500).send({
             "error": "something went wrong",
-            "e": error
+            "e": JSON.stringify(error)
         });
-        return;
     }
 });
 
+
+app.get('/note', async (req, res) => {
+    let accesscode = req.headers.authorization;
+    if (!accesscode) {
+        res.status(500).send({
+            "error": "missing access code"
+        })
+        return;
+    }
+
+    try {
+        let response = await got("https://www.strava.com/api/v3/athlete/", {
+            headers: {
+                "Authorization": accesscode
+            },
+            json: true
+        });
+
+        console.log(response.body);
+
+        try {
+            await client.connect();
+
+            const collection = client.db('Strava').collection('Notes');
+
+            let query = {
+                userid: response.body.id
+            };
+
+            await collection.find(query).toArray((err, result) => {
+                if (err) {
+                    throw err;
+                }
+                res.status(200).send(result);
+            });
+        } catch (error) {
+            console.log(error);
+            throw err;
+        }
+    } catch (error) {
+        res.status(500).send({
+            "error": "something went wrong",
+            "e": JSON.stringify(error)
+        });
+    }
+});
 
 
 // app.post('/user', async (req, res) => {
