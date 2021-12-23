@@ -4,16 +4,14 @@ const got = require('got');
 const fs = require('fs/promises');
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
-const PORT = process.env.PORT || 5500
 const {
     MongoClient
 } = require('mongodb');
 const config = require('./config.json');
 
-// mongodb
-
 const client = new MongoClient(config.finalUrl);
 const app = express();
+const port = 5500;
 
 app.use(bodyParser.json());
 
@@ -30,6 +28,8 @@ app.get('/test', async (req, res) => {
         'result': 'Test succeeded'
     });
 })
+
+
 
 app.post('/signup', (req, res) => {
     console.log(req.body);
@@ -146,6 +146,6 @@ app.get('/note', async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
-    console.log('API is running at http://localhost:${PORT}');
+app.listen(port, () => {
+    console.log(`API is running at http://localhost:${port}`);
 })
