@@ -4,7 +4,7 @@ const got = require('got');
 const fs = require('fs/promises');
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
-const PORT = proces.env.PORT
+const PORT = process.env.PORT || 5500
 const {
     MongoClient
 } = require('mongodb');
@@ -14,7 +14,6 @@ const config = require('./config.json');
 
 const client = new MongoClient(config.finalUrl);
 const app = express();
-const PORT = 5500;
 
 app.use(bodyParser.json());
 
