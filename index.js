@@ -4,18 +4,20 @@ const got = require('got');
 const fs = require('fs/promises');
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
-require('dotenv').config();
-
-// Mongo client
-
+const PORT = proces.env.PORT
 const {
     MongoClient
 } = require('mongodb');
-const client = new MongoClient(process.env.FINAL_URL);
+const config = require('./config.json');
+
+// mongodb
+
+const client = new MongoClient(config.finalUrl);
 const app = express();
-const port = process.env.PORT;
+const PORT = 5500;
 
 app.use(bodyParser.json());
+
 app.use(cors());
 
 app.use((req, res, next) => {
@@ -29,8 +31,6 @@ app.get('/test', async (req, res) => {
         'result': 'Test succeeded'
     });
 })
-
-
 
 app.post('/signup', (req, res) => {
     console.log(req.body);
@@ -147,6 +147,6 @@ app.get('/note', async (req, res) => {
     }
 });
 
-app.listen(port, () => {
-    console.log(`API is running at http://localhost:${port}`);
+app.listen(PORT, () => {
+    console.log('API is running at http://localhost:${PORT}');
 })
